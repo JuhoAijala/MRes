@@ -18,7 +18,7 @@ addpath(genpath(cd()));
 screens = Screen('Screens');    % this counts the number of screens that we have
 KbName('UnifyKeyNames');        % this is important for some reason to standardise keyboard input across platforms / OSs
 
-if length(screens) > 2         % if using two monitors
+if length(screens) > 2          % if using two monitors
     screenNum = 2;              % use the secondary monitor
 else
     screenNum = 0;              % use the primary monitor
@@ -30,6 +30,11 @@ Screen('Preference', 'SkipSyncTests', 1);       % skip the Psychtoolbox calibrat
 [scrWidth, scrHeight] = Screen('WindowSize',screenNum);
 screenRes = [scrWidth scrHeight];
 scr_centre = screenRes / 2;
+%% Take participant info
+subNo = input('Please enter subject number:');
+age = input('Age:');
+sex = input('Gender:');
+
 
 %% Open the PTB Screen
 [MainWindow, rect] = Screen(screenNum, 'OpenWindow', [0 0 0], [], 32);      % Open the Psychtoolbox window (just added the rect here to get it for the fixation cross JÃ„)
@@ -58,9 +63,9 @@ rng('shuffle')
 rand('state',sum(100*clock));                                               %Reset rng based on the clock
 
 %% Set up stimulus sizes - we might want to change these values
-stim_size = dva2pix(2);                                             %I had to change these: apparently my computers graphics dont
-stim_line_width = dva2pix(0.2);                                     %Support im_size = dva2pix(3), im_line_width = dva2pix(0.3)
-line_width = dva2pix(0.2);                                          %or ne_width = dva2pix(0.3);
+stim_size = dva2pix(2);                                             
+stim_line_width = dva2pix(0.2);                                     
+line_width = dva2pix(0.2);                                          
 line_size = dva2pix(1);
 
 
@@ -113,9 +118,10 @@ arcRect = [scr_centre(1) - arc_radius, scr_centre(2) - arc_radius, scr_centre(1)
 
 
 %% Setting up basic info about the experiment
+% blocks = 6;                                                                 %Number of blocks in the experiment;
+% blocks_per_con = blocks/Con_number;                                         %amount of blocks per one condition
+
 Con_number = 2;                                                             %This is two at the moment (target in the middle/distractor in the middle)
-blocks = 6;                                                                 %Number of blocks in the experiment;
-blocks_per_con = blocks/Con_number;                                         %amount of blocks per one condition
 trials_per_con = 20  ;                                                       %No of trials for each condition, just randomly picked atm
 sub_con = 4;                                                                %Target up/down/left/right
 total_trials = trials_per_con*Con_number;                                   %No of total trials
@@ -123,34 +129,30 @@ con_trials = total_trials/Con_number;                                       %How
 sub_con_trials = total_trials/sub_con;                                      %How many trials every sub_con (target up/down or target left/right) has
 
 %How often is the distractor aligned with the target?
-%Creates a matrix lenght(total_trials) X trials_per_con matrix with each row
-%containing a random permutation of numbers from 1 to total_percentage.
+%Creates a matrix with each row
+%containing a random permutation of numbers from 1 to length(sub_con_trials).
 %Used to set the percentage at which the distractor aligns with the target.
 %The rows correspond to the target locations, and the individual numbers in
 %the rows to the trials. For any given trial we can check if
-%does_align(x,i) < percentage. If < percentage, target and distractor do
-%not align. Creates an equal amount of align/does not align -trials for
-%each condition. Percentage can be specified 
+%does_align(x,i) =< percentage. If =< percentage, target and distractor do
+%not align. 
 replacement = false;
-percentage = sub_con_trials*0.5;  
-does_align = [];
+percentage = sub_con_trials*0.5;                                           %currently set at 50%, just to easily check that it works  
+does_align = [];                                                           %create the matrix
 
-for i = 1:sub_con                                                                                                                                          
+for i = 1:sub_con                                                          %randomises the alignments for each condition                                                                                                                                          
 alignment_random = repmat(1:sub_con_trials,1);
 does_align(i,:) = randsample(alignment_random, sub_con_trials);
 end
 
 case_counter = [1 1 1 1];                                                      %Used to count the frequency of every target direction to balance whether 
 
-%NOW ONLY BALANCE FOR THE WHOLE EXPERIMENT
-%NEED TO BE BALANCED ACROSS CONDITIONS!!
-
-                                  
+                               
 %This creates a vector that has the lenght of total trials and consists of
 %a random of arrangment of the experimental conditions with an 50/50 ratio of both of them. 
 
-%WILL BE DONE WITH BLOCKS
-%Randomises the conditions.
+
+%Randomises the conditions. (Not used yet)
 %1 = low WM load
 %2 = high Wm load
 condition_random = repmat(1:Con_number,1,trials_per_con);
@@ -164,12 +166,6 @@ sub_con_list = randsample(sub_con_random, sub_con *sub_con_trials);
 %1 = up/right, 2 = down/left
 distract_random = repmat(1:arcLocs,1, sub_con_trials);
 distract_random_list = randsample(distract_random, sub_con *sub_con_trials);
-
-% %Is the distractor aligned with the target (eg. also in the middle when the
-% %target is) or not (eg. left or right when target in the middle)
-% distract_random = repmat(1:arcLogs/2, sub_con_trials);
-% distract_random_list = randsample(distract_random, sub_con *sub_con_trials);
-
 
 %% %Fixation cross adapted from Thaler, SchÃ¼tz, Goodale and Gegenfurtner (2013)
 %(Thaler, L., SchÃ¼tz, A. C., Goodale, M. A., & Gegenfurtner, K. R. (2013).
@@ -189,12 +185,19 @@ ppd = pi * (rect(3)-rect(1)) / atan(width/ dist/2) / 360;                   % pi
 %Size now set to normal
 
 
+%% Setting up some more stuff
+test_matrix = [0 0 0 0                                                         %a dummy matrix to check that alignment everything is balanced across conditions
+               0 0 0 0
+               0 0 0 0
+               0 0 0 0];
+results=[];                                                                %Empty matrix to save the results in
+vertical  = KbName('m');                                                   %buttons for answering whether the target line is vertical
+horizontal = KbName('c');                                                  %...or horizontal. Just picked at random atm 
 %% Instructions
-test_matrix = [0 0
-               0 0
-               0 0
-               0 0];
-%%Something here
+
+DrawFormattedText(MainWindow, 'Your task is to report how the white line within the green circle is aligned /d press "m" if it is horizontal and "c" if it is vertical', 'center', 'center', WhiteIndex(MainWindow));
+KbWait([],2);
+Screen(MainWindow, 'Flip');
 
 %% A for loop that goes through all the trials
 
@@ -203,124 +206,144 @@ for i = 1:length(con_list)
     %Target is a green circle. Other items are green diamond s. Distractors
     %are red curves appearing in the periphery.
     
+    %Sets up lines. Now done before to set up targetline within the
+    %switch-cases
+    leftline = randi(2);
+    rightline = randi(2);
+    upline = randi(2);
+    downline = randi(2);
+    
     switch sub_con_list(i)
-        case 1                                                             %TARGET UP
-%% This decides whether the target aligns with the distractor
-            if does_align(1,case_counter(sub_con_list(i))) > percentage                                                            %in total 25% of times aligns with the target         
+        case 1                                                                                         %TARGET UP
+            %% This decides whether the target aligns with the distractor
+            if does_align(1,case_counter(sub_con_list(i))) > percentage                                %in total 50% of times aligns with the target
                 if distract_random_list(i) <= length(distract_random_list)/2                           %Distractor is...
-                    dist_location = 1;                                                                 %Up 12.5% of times                      
+                    dist_location = 1;                                                                 %Up 25% of times
+                      test_matrix (1,1) = test_matrix(1,1) + 1
                 else
-                    dist_location = 3;                                                                 %Down 12.5% of times     
+                    dist_location = 3;                                                                 %Down 25% of times
+                    test_matrix (1,2) = test_matrix(1,2) + 1
                 end
-                test_matrix (1,1) = test_matrix(1,1) + 1
-            elseif does_align(1,case_counter(sub_con_list(i) )) <= percentage                                                        %in total 75% of times does not align with the target                   
+              
+            elseif does_align(1,case_counter(sub_con_list(i) )) <= percentage                          %in total 50% of times does not align with the target
                 if distract_random_list(i) <= length(distract_random_list)/2                           %Distractor is...
-                    dist_location = 2;                                                                  %left 37.5% of the time                                    
+                    dist_location = 2;                                                                 %left 25% of the time
+                    test_matrix (1,3) = test_matrix(1,3) + 1
                 else
-                    dist_location = 4;                                                                  %right 37.5% of the time
+                    dist_location = 4;                                                                 %right 25% of the time
+                    test_matrix (1,4) = test_matrix(1,4) + 1
+                end  
+           end
+            
+            case_counter(sub_con_list(i)) = case_counter(sub_con_list(i)) + 1;
+            %% This sets up target and neutral stimuli
+            up_random = circles(2);                                                                    %TARGET
+            down_random = diamonds(2);                                                                 %neutral
+            right_random = diamonds(2);                                                                %neutral
+            left_random = diamonds(2);                                                                 %neutral
+            target_line = upline;                                                                      %Sets the target line to check whether the participant's response was correct
+                        
+        case 2                                                                                         %TARGET DOWN
+            %% This decides whether the target aligns with the distractor
+            
+            if does_align(2,case_counter(sub_con_list(i))) > percentage                                %in total 50% of times aligns with the target
+                if distract_random_list(i) == 1                                                        %Distractor is...
+                    dist_location = 1;                                                                 %Up 25% of times
+                    test_matrix (2,1) = test_matrix(2,1) + 1
+                else
+                    dist_location = 3;                                                                 %Down 25% of times
+                    test_matrix (2,2) = test_matrix(2,2) + 1
                 end
-                test_matrix (1,2) = test_matrix(1,2) + 1
+                
+            elseif does_align(2,case_counter(sub_con_list(i))) <= percentage                           %in total 50% of times does not align with the target
+                if distract_random_list(i) == 1                                                        %Distractor is...
+                    dist_location = 2;                                                                 %left 25% of the time
+                    test_matrix (2,3) = test_matrix(2,3) + 1
+                else
+                    dist_location = 4;                                                                 %right 25% of the time
+                    test_matrix (2,4) = test_matrix(2,4) + 1
+                end
+                
             end
-case_counter(sub_con_list(i)) = case_counter(sub_con_list(i)) + 1;
-%% This sets up target and neutral stimuli
-            up_random = circles(2);                                        %TARGET
-            down_random = diamonds(2);                                     %neutral
-            right_random = diamonds(2);                                    %neutral
-            left_random = diamonds(2);                                     %neutral
             
+            case_counter(sub_con_list(i)) = case_counter(sub_con_list(i)) + 1;
+            %% This sets up target and neutral stimuli
+            up_random = diamonds(2);                                                                   %neutral
+            down_random = circles(2);                                                                  %TARGET
+            right_random = diamonds(2);                                                                %neutral
+            left_random = diamonds(2);                                                                 %neutral
+            target_line = downline;                                                                    %Sets the target line to check whether the participant's response was correct
             
-        case 2                                                             %TARGET DOWN
-%% This decides whether the target aligns with the distractor          
-     
-            if does_align(2,case_counter(sub_con_list(i))) > percentage                               %in total 25% of times aligns with the target           
-                if distract_random_list(i) == 1                            %Distractor is...
-                    dist_location = 1;                                     %Up 12.5% of times                 
+        case 3                                                                                         %TARGET RIGHT
+            %% This decides whether the target aligns with the distractor
+            if does_align(3,case_counter(sub_con_list(i))) > percentage                                 
+                if distract_random_list(i) == 1                                                        %Same as earlier
+                    dist_location = 2;
+                    test_matrix (3,1) = test_matrix(3,1) + 1
                 else
-                    dist_location = 3;                                     %Down 12.5% of times    
-                end
-                test_matrix (2,1) = test_matrix(2,1) + 1
-            elseif does_align(2,case_counter(sub_con_list(i))) <= percentage                            %in total 75% of times does not align with the target             
-                if distract_random_list(i) == 1                            %Distractor is...
-                    dist_location = 2;                                     %left 37.5% of the time                                      
-                else
-                    dist_location = 4;                                     %right 37.5% of the time
-                end
-                test_matrix (2,2) = test_matrix(2,2) + 1
-            end
-case_counter(sub_con_list(i)) = case_counter(sub_con_list(i)) + 1;
-%% This sets up target and neutral stimuli
-            up_random = diamonds(2);                                       %neutral
-            down_random = circles(2);                                      %TARGET
-            right_random = diamonds(2);                                    %neutral
-            left_random = diamonds(2);                                     %neutral
-            
-        case 3                                                             %TARGET RIGHT
-%% This decides whether the target aligns with the distractor
-            if does_align(3,case_counter(sub_con_list(i))) > percentage                               %in total 25% of times aligns with the target           
-                if distract_random_list(i) == 1                            %Distractor is...
-                    dist_location = 2;                                     %Left 12.5% of times                 
-                else
-                    dist_location = 4;                                     %Right 12.5% of times    
+                    dist_location = 4; 
+                    test_matrix (3,2) = test_matrix(3,2) + 1
                 end
                 test_matrix (3,1) = test_matrix(3,1) + 1
-            elseif does_align(3,case_counter(sub_con_list(i))) <= percentage                            %in total 75% of times does not align with the target             
-                if distract_random_list(i) == 1                            %Distractor is...
-                    dist_location = 1;                                     %Up 37.5% of the time                                      
+            elseif does_align(3,case_counter(sub_con_list(i))) <= percentage                            
+                if distract_random_list(i) == 1                            
+                    dist_location = 1;
+                    test_matrix (3,3) = test_matrix(3,3) + 1
                 else
-                    dist_location = 3;                                     %Down 37.5% of the time
+                    dist_location = 3;   
+                    test_matrix (3,4) = test_matrix(3,4) + 1
                 end
-                test_matrix (3,2) = test_matrix(3,2) + 1
+                
             end
-case_counter(sub_con_list(i)) = case_counter(sub_con_list(i)) + 1;
-%% This sets up target and neutral stimuli
             
-            distract_leftright = distract_random_list(i);                  %distractor left or right
-            up_random = diamonds(2);                                       %neutral                                   
-            down_random = diamonds(2);                                     %neutral                                  
-            right_random = circles(2);                                     %TARGET
-            left_random = diamonds(2);                                     %neutral   
+            case_counter(sub_con_list(i)) = case_counter(sub_con_list(i)) + 1;
+            %% This sets up target and neutral stimuli
             
-        case 4                                                             %TARGET LEFT     
-%% This decides whether the target aligns with the distractor  
-
-            if does_align(4,case_counter(sub_con_list(i))) > percentage                               %in total 25% of times aligns with the target           
-                if distract_random_list(i) == 1                            %Distractor is...
-                    dist_location = 2;                                     %Left 12.5% of times                 
+            up_random = diamonds(2);                                                                   %neutral
+            down_random = diamonds(2);                                                                 %neutral
+            right_random = circles(2);                                                                 %TARGET
+            left_random = diamonds(2);                                                                 %neutral
+            target_line = rightline;                                                                   %Sets the target line to check whether the participant's response was correct
+            
+        case 4                                                                                         %TARGET LEFT
+           %% This decides whether the target aligns with the distractor
+            if does_align(4,case_counter(sub_con_list(i))) > percentage                                 
+                if distract_random_list(i) == 1                                                        %Same as earlier
+                    dist_location = 2;  
+                    test_matrix (4,1) = test_matrix(4,1) + 1
                 else
-                    dist_location = 4;                                     %Right 12.5% of times    
+                    dist_location = 4; 
+                     test_matrix (4,2) = test_matrix(4,2) + 1
                 end
-                test_matrix (4,1) = test_matrix(4,1) + 1
-            elseif does_align(4,case_counter(sub_con_list(i))) <= percentage                            %in total 75% of times does not align with the target             
-                if distract_random_list(i) == 1                            %Distractor is...
-                    dist_location = 1;                                     %Up 37.5% of the time                                      
+              
+            elseif does_align(4,case_counter(sub_con_list(i))) <= percentage                            
+                if distract_random_list(i) == 1                            
+                    dist_location = 1;    
+                     test_matrix (4,3) = test_matrix(4,3) + 1
                 else
-                    dist_location = 3;                                     %Down 37.5% of the time
+                    dist_location = 3;
+                     test_matrix (4,4) = test_matrix(4,4) + 1
                 end
-                test_matrix (4,2) = test_matrix(4,2) + 1
+              
             end
-case_counter(sub_con_list(i)) = case_counter(sub_con_list(i)) + 1; 
-%% This sets up target and neutral stimuli
             
-            up_random = diamonds(2);
-            down_random = diamonds(2);
-            right_random = diamonds(2);
-            left_random = circles(2);
+            case_counter(sub_con_list(i)) = case_counter(sub_con_list(i)) + 1;
+            %% This sets up target and neutral stimuli
             
-    end
+            up_random = diamonds(2);                                                                   %neutral
+            down_random = diamonds(2);                                                                 %neutral
+            right_random = diamonds(2);                                                                %neutral
+            left_random = circles(2);                                                                  %TARGET
+            target_line = leftline;                                                                    %Sets the target line to check whether the participant's response was correct
+            
+            end
     
- 
-%%Orientations for targetlines. Just assigned at random atm.
 
-% DP - keeping these random is fine
-leftline = randi(2);
-rightline = randi(2);
-upline = randi(2);
-downline = randi(2);
-
-
+%initialise kbcheck
+[KeyIsDown, endrt, KeyCode]= KbCheck;
 %
-%% Draw the shapes according to conditions
-
+%% Draw the shapes according to conditions and record answers
+    Screen(MainWindow, 'Flip');
     %and fixation cross in the middle
     Screen('FillOval', MainWindow, colorOval, [cx-sizecircle1/2 * ppd, cy-sizecircle1/2 * ppd, cx+sizecircle1/2 * ppd, cy+sizecircle1/2 * ppd], sizecircle1 * ppd);
     Screen('DrawLine', MainWindow, colorCross, cx-sizecircle1/2 * ppd, cy, cx+sizecircle1/2 * ppd, cy, sizecircle2 * ppd);
@@ -340,28 +363,63 @@ downline = randi(2);
     Screen('DrawTexture', MainWindow, target_lines(upline), [], linecoor(3,:));
     
     % The peripheral arc distractors:
-    possible_arcLocs = 1:arcLocs;        %all the possible arc locations, should give: [1 2 3 4]
-    coloured_arcLoc = dist_location;    %pick a location to be coloured at random. Will want to change this so that distractor is not 100% random on each trial. If you get stuck with this let me know.
-    gray_arcLoc = possible_arcLocs(possible_arcLocs ~= coloured_arcLoc); % all other arc locations will be grey
-    Screen('FrameArc', MainWindow, red, arcRect, arc_start(coloured_arcLoc), arc_angle, arc_width);  % this function draws the coloured arc. You can run 'Screen FrameArc?' for more info about it.
+    possible_arcLocs = 1:arcLocs;                                          %all the possible arc locations, should give: [1 2 3 4]
+    coloured_arcLoc = dist_location;                                       %pick a location to be coloured at random. Will want to change this so that distractor is not 100% random on each trial. If you get stuck with this let me know.
+    gray_arcLoc = possible_arcLocs(possible_arcLocs ~= coloured_arcLoc);   %all other arc locations will be grey
+    Screen('FrameArc', MainWindow, red, arcRect, arc_start(coloured_arcLoc), arc_angle, arc_width);  %this function draws the coloured arc. You can run 'Screen FrameArc?' for more info about it.
     
-    for i = 1:length(gray_arcLoc) % for the other arc locations
-        Screen('FrameArc', MainWindow, gray, arcRect, arc_start(gray_arcLoc(i)), arc_angle, arc_width); % draw a grey arc
+    for n = 1:length(gray_arcLoc) % for the other arc locations
+        Screen('FrameArc', MainWindow, gray, arcRect, arc_start(gray_arcLoc(n)), arc_angle, arc_width); % draw a grey arc
     end
 
+    %Flip the screen and takes startrt to calculate reaction times
+    
+    [VBLTimestamp, StimulusOnset] = Screen(MainWindow, 'Flip');
+    
+    %Loop until participant responds. Now just stimuli visible at all times
+    %since we havent really decided a presentation time
+    while (KeyCode(vertical)==0 && KeyCode(horizontal)==0  )
+            [KeyIsDown, endrt, KeyCode]= KbCheck;
+    end
+    
     %Keeping fixation cross visible
-    Screen(MainWindow, 'Flip')
-    KbWait([],2);
     Screen('FillOval', MainWindow, colorOval, [cx-sizecircle1/2 * ppd, cy-sizecircle1/2 * ppd, cx+sizecircle1/2 * ppd, cy+sizecircle1/2 * ppd], sizecircle1 * ppd);
     Screen('DrawLine', MainWindow, colorCross, cx-sizecircle1/2 * ppd, cy, cx+sizecircle1/2 * ppd, cy, sizecircle2 * ppd);
     Screen('DrawLine', MainWindow, colorCross, cx, cy-sizecircle1/2 * ppd, cx, cy+sizecircle1/2 * ppd, sizecircle2 * ppd);
     Screen('FillOval', MainWindow, colorOval, [cx-sizecircle2/2 * ppd, cy-sizecircle2/2 * ppd, cx+sizecircle2/2 * ppd, cy+sizecircle2/2 * ppd], sizecircle2 * ppd);
     Screen(MainWindow, 'Flip');
-
-    pause(0.5);
+    
+    reactiontime = round(1000*(endrt-StimulusOnset));                       %Compute reactiom times endrt-stimulusonset 
+    response = find(KeyCode>0);                                             %response (vertical/horizontal)
+    
+   %Computes the accuracy of the participants answer. 1 = correct answer, 
+   %2 = incorrect answer
+   if ((KeyCode(horizontal)== 1 & target_line == 2) | (KeyCode(vertical)==1 & target_line == 1) )
+            accuracy =1;
+   else
+            accuracy =0;         
+   end
+  
+  %saves the data to a matrix. 1 row = 1 trial 
+  resultsholder = [ subNo, age, sex, reactiontime,target_line, response, accuracy ];
+  results = vertcat(results, resultsholder);
+        
+  pause(0.5);
 end
 
-%% Press any key to close experiment
-KbWait([], 2);
+%% Save data and close
 
-sca
+% Saves the data into a matfile with name of "EEGWM_SubNo"
+Savename = num2str(subNo);
+save(strcat('EEGWM_', Savename, '.mat'));
+
+%Thank you -text
+DrawFormattedText(MainWindow, 'Thank you for participating', 'center', 'center', WhiteIndex(MainWindow));
+Screen('Flip', MainWindow);
+WaitSecs(3);
+
+%Shuts down everything
+Screen('CloseAll');
+ShowCursor;
+fclose('all');
+Priority(0);
